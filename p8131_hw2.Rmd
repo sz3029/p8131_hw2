@@ -201,9 +201,9 @@ exp(coef(summary(fit.logit))[1])
 exp(coef(summary(fit.logit))[2])
 ```
 
-The odds of enrolls when there is zero amount of scholarship is 0.192504. And for a one-unit increase in the amount of scholarship, we expect to see about 3.1% increase in the odds of enrolls among those students who were offered with scholarship. 
+The odds of enrolls when there is zero amount of scholarship is 0.192504. The odds ratio (OR) of is 1.03, meaning that for a one-unit increase in the amount of scholarship, we expect to see about 3.1% increase in the odds of enrolls among those students who were offered with scholarship. 
 
-The 95% CI is:
+The 95% CI for the OR is:
 
 ```{r q2b}
 CI1 = fit.logit$coefficients + kronecker(
@@ -212,11 +212,10 @@ CI1 = fit.logit$coefficients + kronecker(
 
 out = cbind(exp(CI1)[-1,,drop=FALSE])
 
-colnames(out)=c('Estimate for Beta','95% CI Lower','95% CI Upper')
+colnames(out)=c('Estimate for OR','95% CI Lower','95% CI Upper')
 rownames(out)=c('logit')
 out %>% knitr::kable(digits = 3)
 ```
-
 
 ### (c) How much scholarship should we provide to get 40% yield rate (the percentage of admitted students who enroll?) What is the 95% CI?
 
