@@ -91,6 +91,8 @@ rownames(out)=c('logit', 'probit', 'complementary log-log')
 out %>% knitr::kable(digits = 3)
 ```
 
+The deviance of complementary log-log	is the largest, and the deviance of the probit model is smallest. We can probably infer that the probit model fits the data best. 
+
 ### (b) Suppose that the dose level is in natural logarithm scale, estimate LD50 with 90% confidence interval based on the three models.
 
 LD50 Estimate for logit model:
@@ -210,7 +212,7 @@ CI1 = fit.logit$coefficients + kronecker(
 
 out = cbind(exp(CI1)[-1,,drop=FALSE])
 
-colnames(out)=c('Estimate for Beta','95% CI','95% CI')
+colnames(out)=c('Estimate for Beta','95% CI Lower','95% CI Upper')
 rownames(out)=c('logit')
 out %>% knitr::kable(digits = 3)
 ```
