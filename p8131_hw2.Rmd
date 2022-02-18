@@ -1,0 +1,36 @@
+---
+title: "P8131 HW2"
+output: pdf_document
+author: Shihui Zhu, sz3029
+---
+
+```{r library, include=FALSE}
+library(ggplot2)
+library(tidyverse)
+```
+
+## Problem 1
+
+Fit the model with logit, probit, and complementary log-log links
+
+```{r input, echo=FALSE}
+data1 = tibble(dose_x = 0:4, num_of_dying = c(2, 8, 15, 23, 27), 
+               total_num = 30,
+               live = total_num-num_of_dying)
+data1
+```
+
+Fit $g(P(dying)) = \alpha+\beta X$ using logit:
+
+```{r logit}
+# Fit GLM
+fit_logit = glm(cbind(num_of_dying, live) ~ dose_x, family = binomial(link = 'logit'),
+          data = data1)
+summary(fit_logit) 
+```
+
+Therefore, the table is:
+```{r table}
+
+```
+
