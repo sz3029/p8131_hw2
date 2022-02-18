@@ -11,6 +11,8 @@ library(tidyverse)
 
 ## Problem 1
 
+### a) Fill out the table and give comments
+
 Fit the model with logit, probit, and complementary log-log links
 
 ```{r input, echo=FALSE}
@@ -24,10 +26,70 @@ Fit $g(P(dying)) = \alpha+\beta X$ using logit:
 
 ```{r logit}
 # Fit GLM
-fit_logit = glm(cbind(num_of_dying, live) ~ dose_x, family = binomial(link = 'logit'),
+fit.logit = glm(cbind(num_of_dying, live) ~ dose_x, family = binomial(link = 'logit'),
           data = data1)
-summary(fit_logit) 
+fit.logit$coefficients
 ```
+
+So the fitted logit model is 
+
+$$\hat{\pi}(x) = \frac{e^{-2.323790+1.161895x}}{1+e^{-2.323790+1.161895x}}$$
+$\beta$ is 1.161895.
+
+Fit $g(P(dying)) = \alpha+\beta X$ using probit:
+```{r probit}
+fit.probit = glm(cbind(num_of_dying, live) ~ dose_x, family = binomial(link = 'probit'),
+          data = data1)
+fit.probit$coefficients
+```
+
+So the fitted probit model is:
+$$\hat{\pi}(x) = \phi(-1.3770923+0.6863805x)$$
+$\beta$ is 0.6863805.
+
+Fit $g(P(dying)) = \alpha+\beta X$ using complementary log-log:
+```{r cloglog}
+fit.cloglog = glm(cbind(num_of_dying, live) ~ dose_x, family = binomial(link = 'cloglog'),
+          data = data1)
+fit.cloglog$coefficients
+```
+
+So the fitted complementary log-log model is:
+$$\hat{\pi}(x) = 1 - e^{-e^{-1.9941520+0.7468193x}}$$
+$\beta$ is 0.7468193. 
+
+Table:
+```{r cis_probit}
+# 95% CI for beta
+invfisher.logit <- vcov(fit.logit) # inverse of fisher information matrix
+invfisher.probit <- vcov(fit.probit)
+invfisher.cloglog <- vcov(fit.cloglog)
+
+# Compute CIs
+CI.logit = fit.logit$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.025))),
+                                              t(t(sqrt(diag(invfisher.logit)))))
+CI.probit = fit.probit$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.025))),
+                                              t(t(sqrt(diag(invfisher.probit)))))
+CI.cloglog = fit.cloglog$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.025))),
+                                              t(t(sqrt(diag(invfisher.cloglog)))))
+# Bind columns
+out.logit = cbind(exp(CI.logit)[-1,,drop = FALSE], 
+                  coef(summary(fit.logit))[-1,4,drop = FALSE], 
+                  fit.logit$deviance)
+out.probit = cbind(exp(CI.probit)[-1,,drop = FALSE], 
+                   coef(summary(fit.probit))[-1,4,drop = FALSE], 
+                   fit.probit$deviance)
+out.cloglog = cbind(exp(CI.cloglog)[-1,,drop = FALSE], 
+                    coef(summary(fit.cloglog))[-1,4,drop = FALSE], 
+                    fit.cloglog$deviance)
+
+# Bind rows
+out <- rbind(out.logit, out.probit, out.cloglog)
+colnames(out)=c('Estimate of Beta','95% CI lower','95% CI upper','p-value', "Deviance")
+rownames(out)=c('logit', 'probit', 'complementary log-log')
+out
+```
+
 
 Therefore, the table is:
 ```{r table}
