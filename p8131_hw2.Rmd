@@ -73,13 +73,13 @@ CI.probit = fit.probit$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.025)
 CI.cloglog = fit.cloglog$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.025))),
                                               t(t(sqrt(diag(invfisher.cloglog)))))
 # Bind columns
-out.logit = cbind(exp(CI.logit)[-1,,drop = FALSE], 
-                  coef(summary(fit.logit))[-1,4,drop = FALSE], 
-                  fit.logit$deviance)
-out.probit = cbind(exp(CI.probit)[-1,,drop = FALSE], 
+out.logit = cbind(CI.logit[-1,,drop = FALSE],
+                  fit.logit$deviance,
+                  )
+out.probit = cbind(CI.probit[-1,,drop = FALSE], 
                    coef(summary(fit.probit))[-1,4,drop = FALSE], 
                    fit.probit$deviance)
-out.cloglog = cbind(exp(CI.cloglog)[-1,,drop = FALSE], 
+out.cloglog = cbind(CI.cloglog[-1,,drop = FALSE], 
                     coef(summary(fit.cloglog))[-1,4,drop = FALSE], 
                     fit.cloglog$deviance)
 
