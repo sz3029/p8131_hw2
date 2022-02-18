@@ -33,7 +33,7 @@ fit.logit$coefficients
 
 So the fitted logit model is 
 
-$$\hat{\pi}(x) = \frac{e^{-2.323790+1.161895x}}{1+e^{-2.323790+1.161895x}}$$
+$$\hat{\pi}(x) = \frac{e^{-2.323790+1.161895x}}{1-e^{-2.323790+1.161895x}}$$
 $\beta$ is 1.161895.
 
 Fit $g(P(dying)) = \alpha+\beta X$ using probit:
@@ -74,25 +74,170 @@ CI.cloglog = fit.cloglog$coefficients + kronecker(t(c(0,qnorm(0.025),-qnorm(0.02
                                               t(t(sqrt(diag(invfisher.cloglog)))))
 # Bind columns
 out.logit = cbind(CI.logit[-1,,drop = FALSE],
-                  fit.logit$deviance,
-                  )
-out.probit = cbind(CI.probit[-1,,drop = FALSE], 
-                   coef(summary(fit.probit))[-1,4,drop = FALSE], 
-                   fit.probit$deviance)
-out.cloglog = cbind(CI.cloglog[-1,,drop = FALSE], 
-                    coef(summary(fit.cloglog))[-1,4,drop = FALSE], 
-                    fit.cloglog$deviance)
+                  sum(residuals(fit.logit,type='deviance')^2), # or fit.logit$deviance
+                  predict(fit.logit, newdata = tibble(dose_x = 0.01), type = "response"))
+out.probit = cbind(CI.probit[-1,,drop = FALSE],
+                   sum(residuals(fit.probit,type = 'deviance')^2),
+                   predict(fit.probit, newdata = tibble(dose_x = 0.01), type = "response"))
+out.cloglog = cbind(CI.cloglog[-1,,drop = FALSE],
+                    sum(residuals(fit.cloglog,type='deviance')^2),
+                    predict(fit.cloglog, newdata = tibble(dose_x = 0.01), type = "response"))
 
 # Bind rows
 out <- rbind(out.logit, out.probit, out.cloglog)
-colnames(out)=c('Estimate of Beta','95% CI lower','95% CI upper','p-value', "Deviance")
+colnames(out)=c('Estimate of Beta','95% CI lower','95% CI upper', "Deviance", "P(dying|x = 0.01)")
 rownames(out)=c('logit', 'probit', 'complementary log-log')
-out
+
+out %>% knitr::kable(digits = 3)
+```
+
+### (b) Suppose that the dose level is in natural logarithm scale, estimate LD50 with 90% confidence interval based on the three models.
+
+LD50 Estimate for logit model:
+```{r ld50_logit}
+# Logit
+x_0 <- -coef(summary(fit.logit))[1]/coef(summary(fit.logit))[2]
+# Point Estimate
+# MASS::dose.p(fit.logit, p = 0.5)
+x_0.se <- sqrt(
+  t(c(-1/coef(summary(fit.logit))[2],
+      coef(summary(fit.logit))[1]/coef(summary(fit.logit))[2]^2)) %*% 
+    invfisher.logit %*% 
+    c(-1/coef(summary(fit.logit))[2],
+      coef(summary(fit.logit))[1]/coef(summary(fit.logit))[2]^2))
+# 90% CI
+ld50.logit <- c(exp(x_0), exp(x_0 - qnorm(0.95)*x_0.se), exp(x_0 + qnorm(0.95)*x_0.se))
+```
+
+LD50 Estimate for probit model:
+```{r ld50_probit}
+# Probit
+x_0 <- -coef(summary(fit.probit))[1]/coef(summary(fit.probit))[2]
+# Point Estimate
+# MASS::dose.p(fit.probit, p = 0.5)
+x_0.se <- sqrt(
+  t(c(-1/coef(summary(fit.probit))[2],
+      coef(summary(fit.probit))[1]/coef(summary(fit.probit))[2]^2)) %*% 
+    invfisher.probit %*% 
+    c(-1/coef(summary(fit.probit))[2],
+      coef(summary(fit.probit))[1]/coef(summary(fit.probit))[2]^2))
+# 90% CI
+ld50.probit <- c(exp(x_0), exp(x_0 - qnorm(0.95)*x_0.se), exp(x_0 + qnorm(0.95)*x_0.se))
+```
+
+LD50 Estimate for cloglog model:
+```{r ld50_cloglog}
+# C log-log
+x_0 <- (log(-log(0.5))-coef(summary(fit.cloglog))[1])/coef(summary(fit.cloglog))[2]
+# Point Estimate
+# MASS::dose.p(fit.cloglog, p = 0.5)
+x_0.se <- sqrt(
+  t(c(-1/coef(summary(fit.cloglog))[2],
+      (coef(summary(fit.cloglog))[1] - log(-log(0.5)))/coef(summary(fit.cloglog))[2]^2)) %*%
+    invfisher.cloglog %*% 
+    c(-1/coef(summary(fit.cloglog))[2],
+      (coef(summary(fit.cloglog))[1] - log(-log(0.5)))/coef(summary(fit.cloglog))[2]^2))
+# 90% CI
+ld50.cloglog <- c(exp(x_0), exp(x_0 - qnorm(0.95)*x_0.se), exp(x_0 + qnorm(0.95)*x_0.se))
+```
+
+So the LD50 with 90% confidence interval based on the three models is:
+```{r table_90, echo=FALSE}
+out_ld50 <- rbind(ld50.logit, ld50.probit, ld50.cloglog)
+colnames(out_ld50) = c('Estimate of LD50','90% CI lower','90% CI upper')
+rownames(out_ld50)=c('logit', 'probit', 'complementary log-log')
+
+out_ld50 %>% knitr::kable(digits = 3)
+```
+
+## Problem 2
+
+### (a) How does the model fit the data?
+
+Fit the model using logit
+
+```{r input_2, echo=FALSE}
+data2 <- tibble(amount = seq(10, 90, by = 5), 
+                offers = c(4, 6, 10, 12, 39, 36, 22, 14, 10, 12, 8, 9, 3, 1, 5, 2, 1),
+                enrolls = c(0, 2, 4, 2, 12, 14, 10, 7, 5, 5, 3, 5, 2, 0, 4, 2, 1),
+                rejects = offers - enrolls)
+data2
+```
+```{r logit_2}
+# Fit GLM
+fit.logit = glm(cbind(enrolls, rejects) ~ amount, family = binomial(link = 'logit'),
+          data = data2)
+fit.logit$coefficients
+```
+
+So the fitted logit model is 
+
+$$\hat{\pi}(x) = \frac{e^{-1.64763837+0.03095043x}}{1-e^{-1.64763837+0.03095043x}}$$
+This is grouped data. To evaluate how the model fits the data, we compute pearson chi-squared and deviance for the model. And we test on how the model is close to the full model:
+
+$H_0$: The model is close to the full model
+
+$H_1$: not close to full model
+
+```{r goodness}
+G.stat <- sum(residuals(fit.logit, type = 'pearson')^2);G.stat # pearson chisq
+
+dev <- fit.logit$deviance;dev # deviance
+
+# compare with chisq(17-2)
+pval = 1 - pchisq(dev,15);pval # fit is not good(over dispersion; lack of covariate)
+```
+
+The generalized pearson chi-squared statistics is 8.814299, and the deviance is 10.61271. The p-value is large so we do not reject the null hypothesis. The model fits the data fine. 
+
+### (b) How do you interpret the relationship between the scholarship amount and enrollment rate? What is 95% CI?
+
+```{r interpret}
+# No scholarship
+exp(coef(summary(fit.logit))[1])
+# OR_(n+1/n)
+exp(coef(summary(fit.logit))[2])
+```
+
+The odds of enrolls when there is zero amount of scholarship is 0.192504. And for a one-unit increase in the amount of scholarship, we expect to see about 3.1% increase in the odds of enrolls among those students who were offered with scholarship. 
+
+The 95% CI is:
+
+```{r q2b}
+CI1 = fit.logit$coefficients + kronecker(
+  t(c(0,qnorm(0.025),-qnorm(0.025))),
+  t(t(sqrt(diag(vcov(fit.logit))))))
+
+out = cbind(exp(CI1)[-1,,drop=FALSE])
+
+colnames(out)=c('Estimate for Beta','95% CI','95% CI')
+rownames(out)=c('logit')
+out %>% knitr::kable(digits = 3)
 ```
 
 
-Therefore, the table is:
-```{r table}
+### (c) How much scholarship should we provide to get 40% yield rate (the percentage of admitted students who enroll?) What is the 95% CI?
 
+```{r}
+r_star <- log(0.4/0.6)
+invfisher.logit <- vcov(fit.logit)
+# Logit
+x_0 <- (r_star-coef(summary(fit.logit))[1])/coef(summary(fit.logit))[2]
+# Point Estimate
+# MASS::dose.p(fit.logit, p = 0.4)
+x_0.se <- sqrt(
+  t(c(-1/coef(summary(fit.logit))[2],
+      (coef(summary(fit.logit))[1] - r_star)/coef(summary(fit.logit))[2]^2)) %*% 
+    invfisher.logit %*% 
+    c(-1/coef(summary(fit.logit))[2],
+      (coef(summary(fit.logit))[1] - r_star)/coef(summary(fit.logit))[2]^2))
+# 95% CI
+ld50.logit <- cbind(x_0, x_0 - qnorm(0.975)*x_0.se, x_0 + qnorm(0.975)*x_0.se)
+colnames(ld50.logit) = c('Estimate for Scholarship Amount for 40% Enrollment Rate',
+                         '95% CI Lower',
+                         '95% CI Upper')
+rownames(ld50.logit) = c('logit')
+ld50.logit %>% knitr::kable(digits = 3)
 ```
+
 
