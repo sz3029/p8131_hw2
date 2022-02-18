@@ -201,7 +201,7 @@ exp(coef(summary(fit.logit))[1])
 exp(coef(summary(fit.logit))[2])
 ```
 
-The odds of enrolls when there is zero amount of scholarship is 0.192504. The odds ratio (OR) of is 1.03, meaning that for a one-unit increase in the amount of scholarship, we expect to see about 3.1% increase in the odds of enrolls among those students who were offered with scholarship. 
+The odds of enrolls when there is zero amount of scholarship is 0.192504. The odds ratio (OR) is 1.03, meaning that for a one-unit increase in the amount of scholarship, we expect to see about 3.1% increase in the odds of enrolls among those students who were offered with scholarship. 
 
 The 95% CI for the OR is:
 
